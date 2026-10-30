@@ -61,13 +61,21 @@ with tab_analytics:
     c3.metric("SLA breached", f"{view.sla_breached.mean():.0%}")
     c4.metric("Avg satisfaction", f"{view.csat.mean():.2f} / 5")
 
+    # Every number in the banner uses the same filtered view
     hidden = view[view.hidden_security]
     reported = view[view.group == "Security (reported)"]
-    st.error(f"**{t.hidden_security.sum()} of {t.is_security_incident.sum()} security incidents "
-             f"({t.hidden_security.sum() / t.is_security_incident.sum():.0%}) were filed as ordinary IT problems.** "
-             f"They took {hidden.resolution_hours.median():.1f} h to resolve (median) vs "
-             f"{reported.resolution_hours.median():.1f} h for reported incidents, "
-             f"and breached SLA {hidden.sla_breached.mean():.0%} of the time.")
+    n_security = int(view.is_security_incident.sum())
+    scope = "" if not (departments or channels) else " (filtered view)"
+    if len(hidden) and len(reported):
+        st.error(f"**{len(hidden)} of {n_security} closed security incidents ({len(hidden) / n_security:.0%}) "
+                 f"were filed as ordinary IT problems{scope}.** "
+                 f"They took {hidden.resolution_hours.median():.1f} h to resolve (median) vs "
+                 f"{reported.resolution_hours.median():.1f} h for reported incidents, "
+                 f"and breached SLA {hidden.sla_breached.mean():.0%} of the time.")
+    elif n_security:
+        st.warning(f"{n_security} security incidents in this view, too few to compare hidden vs reported.")
+    else:
+        st.info("No security incidents in this filtered view.")
 
     left, right = st.columns(2)
     with left:
